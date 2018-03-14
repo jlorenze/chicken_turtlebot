@@ -50,6 +50,7 @@ class Supervisor:
         # current mode
         self.mode = Mode.IDLE
         self.last_mode_printed = None
+        self.stop_thresh = 0.7 
 
         self.nav_goal_publisher = rospy.Publisher('/cmd_nav', Pose2D, queue_size=10)
         self.pose_goal_publisher = rospy.Publisher('/cmd_pose', Pose2D, queue_size=10)
@@ -78,8 +79,15 @@ class Supervisor:
         # distance of the stop sign
         dist = msg.distance
 
+        # do something
+        corners = mgs.corners
+        dx = corners[3] - corners[1]
+        dy = corners[2] - corners[0]
+
+        r = dx/dy
+
         # if close enough and in nav mode, stop
-        if dist > 0 and dist < STOP_MIN_DIST and self.mode == Mode.NAV:
+        if dist > 0 and r > self.stop_thresh and self.mode == Mode.NAV:
             self.init_stop_sign()
 
     def go_to_pose(self):
