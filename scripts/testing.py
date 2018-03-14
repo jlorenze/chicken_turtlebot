@@ -4,7 +4,7 @@ import rospy
 from gazebo_msgs.msg import ModelStates
 from std_msgs.msg import Float32MultiArray, String
 from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
-from asl_turtlebot.msg import DetectedObject
+from chicken_turtlebot.msg import DetectedObject
 from matplotlib import pyplot as plt
 import numpy as np
 import pdb
@@ -60,7 +60,8 @@ class Testing:
 
         x = xcam + xstopsign*np.cos(thetacam) - zstopsign*np.sin(thetacam) 
         y = ycam + xstopsign*np.sin(thetacam) + zstopsign*np.cos(thetacam)
-        print x,y
+
+
 
     def run(self):
         rate = rospy.Rate(10) # 10 Hz
