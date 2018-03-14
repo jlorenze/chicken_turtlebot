@@ -77,14 +77,18 @@ class Supervisor:
         a distance of 0 can mean that the lidar did not pickup the stop sign at all """
 
         # distance of the stop sign
-        dist = msg.distance
-
-        # do something
-        corners = mgs.corners
+        corners = msg.corners
         dx = corners[3] - corners[1]
         dy = corners[2] - corners[0]
 
         r = dx/dy
+
+        rdist = np.array([.15, .20, .25, .30,.35, .40, .45, .50])
+        pixelheight = np.array([139, 102, 82, 64, 56, 50, 44, 40])
+        if dy > pixelheight[-1] and dy < pixelheight[0]:
+            dist = np.interp(dy, pixelheight[::-1], rdist[::-1])
+        else:
+            dist = 0
 
         # if close enough and in nav mode, stop
         if dist > 0 and r > self.stop_thresh and self.mode == Mode.NAV:
