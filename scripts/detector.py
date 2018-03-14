@@ -260,11 +260,11 @@ class Detector:
         self.fx and self.fy """
 
         ### YOUR CODE HERE ###
-
-        self.cx = 0 # CHANGE ME
-        self.cy = 0 # CHANGE ME
-        self.fx = 1 # CHANGE ME
-        self.fy = 1 # CHANGE ME
+        K = np.array(msg.K)
+        self.cx = K[2] # CHANGE ME
+        self.cy = K[5] # CHANGE ME
+        self.fx = K[0] # CHANGE ME
+        self.fy = K[4] # CHANGE ME
 
         ### END OF YOUR CODE ###
 
