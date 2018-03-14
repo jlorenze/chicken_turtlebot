@@ -8,6 +8,8 @@ from asl_turtlebot.msg import DetectedObject
 import tf
 import math
 from enum import Enum
+import numpy as np
+import pdb
 
 # threshold at which we consider the robot at a location
 POS_EPS = .1
@@ -21,6 +23,11 @@ STOP_MIN_DIST = .5
 
 # time taken to cross an intersection
 CROSSING_TIME = 3
+
+def wrapToPi(a):
+    if isinstance(a, list):
+        return [(x + np.pi) % (2*np.pi) - np.pi for x in a]
+    return (a + np.pi) % (2*np.pi) - np.pi
 
 # state machine modes, not all implemented
 class Mode(Enum):
@@ -50,7 +57,11 @@ class Supervisor:
         # current mode
         self.mode = Mode.IDLE
         self.last_mode_printed = None
-        self.stop_thresh = 0.7 
+        self.stop_thresh = 0.7
+
+        # stop signs
+        self.stopSigns = []
+        self.stopSignCounts = []
 
         self.nav_goal_publisher = rospy.Publisher('/cmd_nav', Pose2D, queue_size=10)
         self.pose_goal_publisher = rospy.Publisher('/cmd_pose', Pose2D, queue_size=10)
@@ -81,18 +92,57 @@ class Supervisor:
         dx = corners[3] - corners[1]
         dy = corners[2] - corners[0]
 
-        r = dx/dy
+        r = dx/dy # aspect ratio
 
         rdist = np.array([.15, .20, .25, .30,.35, .40, .45, .50])
         pixelheight = np.array([139, 102, 82, 64, 56, 50, 44, 40])
         if dy > pixelheight[-1] and dy < pixelheight[0]:
             dist = np.interp(dy, pixelheight[::-1], rdist[::-1])
         else:
-            dist = 0
+            return
 
-        # if close enough and in nav mode, stop
-        if dist > 0 and r > self.stop_thresh and self.mode == Mode.NAV:
-            self.init_stop_sign()
+        # Get location of camera with respect to the map
+        try:
+            (translation,rotation) = self.trans_listener.lookupTransform('/map', '/camera', rospy.Time(0))
+            xcam = translation[0]
+            ycam = translation[1]
+            zcam = translation[2]
+            euler = tf.transformations.euler_from_quaternion(rotation)
+            thetacam = euler[2]
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return
+
+        # Now we have pose of robot, we want to determine stop sign angle relative
+        # to camera frame
+        thstopsign = (wrapToPi(msg.thetaright) + wrapToPi(msg.thetaleft))/2.
+        zstopsign = dist*np.cos(-thstopsign)
+        xstopsign = dist*np.sin(-thstopsign)
+
+        x = xcam + xstopsign*np.cos(thetacam) - zstopsign*np.sin(thetacam) 
+        y = ycam + xstopsign*np.sin(thetacam) + zstopsign*np.cos(thetacam)
+
+        # Now that we have x and y coord of stop sign in world frame, append coord
+        found = False
+        for i, stopSign in enumerate(self.stopSigns):
+            distance = np.sqrt((x - stopSign[0])**2 + (y - stopSign[1])**2)
+            n = self.stopSignCounts[i]
+            if distance < .2:
+                if n < 100:
+                    # We have found the same stop sign as before
+                    xnew = (n/(n+1.))*stopSign[0] + (1./(n+1))*x
+                    ynew = (n/(n+1.))*stopSign[1] + (1./(n+1))*y
+                    self.stopSigns[i] = np.array([xnew, ynew])
+                    self.stopSignCounts[i] += 1
+                found = True
+        
+        if not found:
+            # Found a new one, append it
+            self.stopSigns.append(np.array([x,y]))
+            self.stopSignCounts.append(1)
+
+        # # If close enough and in nav mode, stop
+        # if dist > 0 and r > self.stop_thresh and self.mode == Mode.NAV:
+        #     self.init_stop_sign()
 
     def go_to_pose(self):
         """ sends the current desired pose to the pose controller """
@@ -161,6 +211,8 @@ class Supervisor:
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             pass
 
+
+
         # logs the current mode
         if not(self.last_mode_printed == self.mode):
             rospy.loginfo("Current Mode: %s", self.mode)
@@ -205,8 +257,11 @@ class Supervisor:
     def run(self):
         rate = rospy.Rate(10) # 10 Hz
         while not rospy.is_shutdown():
-            self.loop()
+            # self.loop()
             rate.sleep()
+        data = np.asarray(self.stopSigns)
+        print data
+        print self.stopSignCounts
 
 if __name__ == '__main__':
     sup = Supervisor()

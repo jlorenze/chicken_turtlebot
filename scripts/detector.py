@@ -141,13 +141,16 @@ class Detector:
         that is a unit vector in the direction of the pixel, in the camera frame.
         This function access self.fx, self.fy, self.cx and self.cy """
 
-        ### YOUR CODE HERE ###
+        # Assume Zc = 1 and compute Xc and Yc
+        Xc = (u - self.cx)/self.fx
+        Yc = (v - self.cy)/self.fy
+        Zc = 1.0
 
-        x = 1 # CHANGE ME
-        y = 0 # CHANGE ME
-        z = 0 # CHANGE ME
-
-        ### END OF YOUR CODE ###
+        # Now normalize to make a unit vector
+        mag = np.sqrt(Xc**2 + Yc**2 + Zc**2)
+        x = Xc/mag
+        y = Yc/mag
+        z = Zc/mag
 
         return (x,y,z)
 
@@ -259,14 +262,11 @@ class Detector:
         the focal lengths. Stores the result in the class itself as self.cx, self.cy,
         self.fx and self.fy """
 
-        ### YOUR CODE HERE ###
         K = np.array(msg.K)
         self.cx = K[2] # CHANGE ME
         self.cy = K[5] # CHANGE ME
         self.fx = K[0] # CHANGE ME
         self.fy = K[4] # CHANGE ME
-
-        ### END OF YOUR CODE ###
 
     def laser_callback(self, msg):
         """ callback for thr laser rangefinder """
