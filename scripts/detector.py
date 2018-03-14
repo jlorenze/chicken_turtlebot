@@ -238,6 +238,15 @@ class Detector:
                     self.object_publishers[cl] = rospy.Publisher('/detector/'+self.object_labels[cl],
                         DetectedObject, queue_size=10)
 
+                # code to ignore backward stop sign
+                if (cl == 13): # if we see a stop sign.
+                    window = img[ymin:ymax, xmin:xmax, :]
+                    window = np.sum(window**2, axis = 2)**0.5 # get grayscale version.
+                    threshold = np.count_nonzero( np.maximum(window - 400, 0) )/((ymax - ymin)*(xmax-xmin)) # count white pixels.
+
+                    if (threshold < 0.1):
+                        cl = 0 # if there is not enough white,
+
                 # publishes the detected object and its location
                 object_msg = DetectedObject()
                 object_msg.id = cl
