@@ -4,10 +4,11 @@ import rospy
 from gazebo_msgs.msg import ModelStates
 from std_msgs.msg import Float32MultiArray, String
 from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
-from asl_turtlebot.msg import DetectedObject
 import tf
 import math
 from enum import Enum
+import numpy as np
+import pdb
 
 # threshold at which we consider the robot at a location
 POS_EPS = .1
@@ -50,12 +51,12 @@ class Supervisor:
         # current mode
         self.mode = Mode.IDLE
         self.last_mode_printed = None
+        self.stop_thresh = 0.7
 
         self.nav_goal_publisher = rospy.Publisher('/cmd_nav', Pose2D, queue_size=10)
         self.pose_goal_publisher = rospy.Publisher('/cmd_pose', Pose2D, queue_size=10)
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
-        rospy.Subscriber('/detector/stop_sign', DetectedObject, self.stop_sign_detected_callback)
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.rviz_goal_callback)
 
         self.trans_listener = tf.TransformListener()
@@ -70,17 +71,6 @@ class Supervisor:
         self.theta_g = euler[2]
 
         self.mode = Mode.NAV
-
-    def stop_sign_detected_callback(self, msg):
-        """ callback for when the detector has found a stop sign. Note that
-        a distance of 0 can mean that the lidar did not pickup the stop sign at all """
-
-        # distance of the stop sign
-        dist = msg.distance
-
-        # if close enough and in nav mode, stop
-        if dist > 0 and dist < STOP_MIN_DIST and self.mode == Mode.NAV:
-            self.init_stop_sign()
 
     def go_to_pose(self):
         """ sends the current desired pose to the pose controller """
@@ -149,6 +139,8 @@ class Supervisor:
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             pass
 
+
+
         # logs the current mode
         if not(self.last_mode_printed == self.mode):
             rospy.loginfo("Current Mode: %s", self.mode)
@@ -193,8 +185,11 @@ class Supervisor:
     def run(self):
         rate = rospy.Rate(10) # 10 Hz
         while not rospy.is_shutdown():
-            self.loop()
+            # self.loop()
             rate.sleep()
+        data = np.asarray(self.stopSigns)
+        print data
+        print self.stopSignCounts
 
 if __name__ == '__main__':
     sup = Supervisor()

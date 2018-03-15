@@ -7,7 +7,7 @@ from tf import TransformListener
 import tensorflow as tf
 import numpy as np
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo, LaserScan
-from asl_turtlebot.msg import DetectedObject
+from chicken_turtlebot.msg import DetectedObject
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import math
@@ -35,6 +35,11 @@ def load_object_labels(filename):
         object_labels[object_id] = label
 
     return object_labels
+
+def wrapToPi(a):
+    if isinstance(a, list):
+        return [(x + np.pi) % (2*np.pi) - np.pi for x in a]
+    return (a + np.pi) % (2*np.pi) - np.pi
 
 class Detector:
 
@@ -65,6 +70,10 @@ class Detector:
         self.laser_ranges = []
         self.laser_angle_increment = 0.01 # this gets updated
 
+        # stop signs
+        self.stopSigns = []
+        self.stopSignCounts = []
+
         self.object_publishers = {}
         self.object_labels = load_object_labels(PATH_TO_LABELS)
 
@@ -73,6 +82,7 @@ class Detector:
         rospy.Subscriber('/camera/image_raw/compressed', CompressedImage, self.compressed_camera_callback, queue_size=1, buff_size=2**24)
         rospy.Subscriber('/camera/camera_info', CameraInfo, self.camera_info_callback)
         rospy.Subscriber('/scan', LaserScan, self.laser_callback)
+        rospy.Subscriber('/detector/stop_sign', DetectedObject, self.stop_sign_detected_callback)
 
     def run_detection(self, img):
         """ runs a detection method in a given image """
@@ -141,13 +151,16 @@ class Detector:
         that is a unit vector in the direction of the pixel, in the camera frame.
         This function access self.fx, self.fy, self.cx and self.cy """
 
-        ### YOUR CODE HERE ###
+        # Assume Zc = 1 and compute Xc and Yc
+        Xc = (u - self.cx)/self.fx
+        Yc = (v - self.cy)/self.fy
+        Zc = 1.0
 
-        x = 1 # CHANGE ME
-        y = 0 # CHANGE ME
-        z = 0 # CHANGE ME
-
-        ### END OF YOUR CODE ###
+        # Now normalize to make a unit vector
+        mag = np.sqrt(Xc**2 + Yc**2 + Zc**2)
+        x = Xc/mag
+        y = Yc/mag
+        z = Zc/mag
 
         return (x,y,z)
 
@@ -238,6 +251,15 @@ class Detector:
                     self.object_publishers[cl] = rospy.Publisher('/detector/'+self.object_labels[cl],
                         DetectedObject, queue_size=10)
 
+                # code to ignore backward stop sign
+                if (cl == 13): # if we see a stop sign.
+                    window = img[ymin:ymax, xmin:xmax, :]
+                    window = np.sum(window**2, axis = 2)**0.5 # get grayscale version.
+                    threshold = np.count_nonzero( np.maximum(window - 400, 0) )/((ymax - ymin)*(xmax-xmin)) # count white pixels.
+
+                    if (threshold < 0.1):
+                        cl = 0 # if there is not enough white,
+
                 # publishes the detected object and its location
                 object_msg = DetectedObject()
                 object_msg.id = cl
@@ -259,20 +281,79 @@ class Detector:
         the focal lengths. Stores the result in the class itself as self.cx, self.cy,
         self.fx and self.fy """
 
-        ### YOUR CODE HERE ###
-
-        self.cx = 0 # CHANGE ME
-        self.cy = 0 # CHANGE ME
-        self.fx = 1 # CHANGE ME
-        self.fy = 1 # CHANGE ME
-
-        ### END OF YOUR CODE ###
+        K = np.array(msg.K)
+        self.cx = K[2] # CHANGE ME
+        self.cy = K[5] # CHANGE ME
+        self.fx = K[0] # CHANGE ME
+        self.fy = K[4] # CHANGE ME
 
     def laser_callback(self, msg):
         """ callback for thr laser rangefinder """
 
         self.laser_ranges = msg.ranges
         self.laser_angle_increment = msg.angle_increment
+
+
+    def stop_sign_detected_callback(self, msg):
+        """ callback for when the detector has found a stop sign. Note that
+        a distance of 0 can mean that the lidar did not pickup the stop sign at all """
+
+        # distance of the stop sign
+        corners = msg.corners
+        dx = corners[3] - corners[1]
+        dy = corners[2] - corners[0]
+
+        r = dx/dy # aspect ratio
+
+        rdist = np.array([.15, .20, .25, .30,.35, .40, .45, .50])
+        pixelheight = np.array([139, 102, 82, 64, 56, 50, 44, 40])
+        if dy > pixelheight[-1] and dy < pixelheight[0]:
+            dist = np.interp(dy, pixelheight[::-1], rdist[::-1])
+        else:
+            return
+
+        # Get location of camera with respect to the map
+        try:
+            (translation,rotation) = self.trans_listener.lookupTransform('/map', '/camera', rospy.Time(0))
+            xcam = translation[0]
+            ycam = translation[1]
+            zcam = translation[2]
+            euler = tf.transformations.euler_from_quaternion(rotation)
+            thetacam = euler[2]
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return
+
+        # Now we have pose of robot, we want to determine stop sign angle relative
+        # to camera frame
+        thstopsign = (wrapToPi(msg.thetaright) + wrapToPi(msg.thetaleft))/2.
+        zstopsign = dist*np.cos(-thstopsign)
+        xstopsign = dist*np.sin(-thstopsign)
+
+        x = xcam + xstopsign*np.cos(thetacam) - zstopsign*np.sin(thetacam) 
+        y = ycam + xstopsign*np.sin(thetacam) + zstopsign*np.cos(thetacam)
+
+        # Now that we have x and y coord of stop sign in world frame, append coord
+        found = False
+        for i, stopSign in enumerate(self.stopSigns):
+            distance = np.sqrt((x - stopSign[0])**2 + (y - stopSign[1])**2)
+            n = self.stopSignCounts[i]
+            if distance < .2:
+                if n < 100:
+                    # We have found the same stop sign as before
+                    xnew = (n/(n+1.))*stopSign[0] + (1./(n+1))*x
+                    ynew = (n/(n+1.))*stopSign[1] + (1./(n+1))*y
+                    self.stopSigns[i] = np.array([xnew, ynew])
+                    self.stopSignCounts[i] += 1
+                found = True
+        
+        if not found:
+            # Found a new one, append it
+            self.stopSigns.append(np.array([x,y]))
+            self.stopSignCounts.append(1)
+
+        # # If close enough and in nav mode, stop
+        # if dist > 0 and r > self.stop_thresh and self.mode == Mode.NAV:
+        #     self.init_stop_sign()
 
     def run(self):
         rospy.spin()
