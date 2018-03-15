@@ -7,7 +7,7 @@ from tf import TransformListener
 import tensorflow as tf
 import numpy as np
 from sensor_msgs.msg import CompressedImage, Image, CameraInfo, LaserScan
-from asl_turtlebot.msg import DetectedObject#, DetectedStopSign
+from chicken_turtlebot.msg import DetectedObject, DetectedStopSign
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
 import math
@@ -71,9 +71,9 @@ class Detector:
         self.laser_angle_increment = 0.01 # this gets updated
 
         # stop signs
-        # self.stopSigns = []
-        # self.stopSignCounts = []
-        # self.stopSignPublisher = rospy.Publisher('/stopSigns', DetectedStopSign, queue_size=10)
+        self.stopSigns = []
+        self.stopSignCounts = []
+        self.stopSignPublisher = rospy.Publisher('/stopSigns', DetectedStopSign, queue_size=10)
 
         self.object_publishers = {}
         self.object_labels = load_object_labels(PATH_TO_LABELS)
@@ -83,7 +83,7 @@ class Detector:
         rospy.Subscriber('/camera/image_raw/compressed', CompressedImage, self.compressed_camera_callback, queue_size=1, buff_size=2**24)
         rospy.Subscriber('/camera/camera_info', CameraInfo, self.camera_info_callback)
         rospy.Subscriber('/scan', LaserScan, self.laser_callback)
-        # rospy.Subscriber('/detector/stop_sign', DetectedObject, self.stop_sign_detected_callback)
+        rospy.Subscriber('/detector/stop_sign', DetectedObject, self.stop_sign_detected_callback)
 
     def run_detection(self, img):
         """ runs a detection method in a given image """
@@ -287,7 +287,8 @@ class Detector:
         self.laser_angle_increment = msg.angle_increment
 
 
-    # def stop_sign_detected_callback(self, msg):
+    def stop_sign_detected_callback(self, msg):
+    	return
     #     """ callback for when the detector has found a stop sign. Note that
     #     a distance of 0 can mean that the lidar did not pickup the stop sign at all """
 
