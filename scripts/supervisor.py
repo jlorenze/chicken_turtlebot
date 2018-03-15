@@ -187,9 +187,6 @@ class Supervisor:
         while not rospy.is_shutdown():
             # self.loop()
             rate.sleep()
-        data = np.asarray(self.stopSigns)
-        print data
-        print self.stopSignCounts
 
 if __name__ == '__main__':
     sup = Supervisor()
