@@ -49,6 +49,7 @@ add_message_files(
  FILES
  DetectedObject.msg
  DetectedStopSign.msg
+ DetectedAnimal.msg
 )
 
 ## Generate services in the 'srv' folder
