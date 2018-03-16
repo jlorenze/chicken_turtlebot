@@ -4,12 +4,13 @@ import rospy
 from gazebo_msgs.msg import ModelStates
 from std_msgs.msg import Float32MultiArray, String, Bool
 from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
-from chicken_turtlebot.msg import DetectedObject
+from chicken_turtlebot.msg import DetectedObject, DetectedStopSign
 import tf
 import math
 from enum import Enum
 import numpy as np
 import pdb
+
 
 # threshold at which we consider the robot at a location
 POS_EPS = .1
@@ -41,7 +42,8 @@ class Supervisor:
 
     def __init__(self):
         rospy.init_node('turtlebot_supervisor', anonymous=True)
-
+        
+        self.N_stops=0
         # current pose
         self.x = 0
         self.y = 0
@@ -63,6 +65,7 @@ class Supervisor:
 
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.rviz_goal_callback)
         rospy.Subscriber('/overrider', Bool, self.overrider_callback)
+        rospy.Subscriber('/stopSigns', DetectedStopSign, self.stopsign_callback)
 
         self.trans_listener = tf.TransformListener()
     
@@ -71,6 +74,9 @@ class Supervisor:
             self.prev_auto_mode = self.mode
             self.manual_start_time = rospy.get_rostime()
             self.mode = Mode.MANUAL
+
+    def stopsign_callback(self, msg):
+        self.N_stops=len(msg.threadnames)
 
     def rviz_goal_callback(self, msg):
         """ callback for a pose goal sent through rviz """
@@ -123,12 +129,11 @@ class Supervisor:
         self.mode = Mode.STOP
 
     def check_distances(self):
-        N_stops=7
-        D=np.ones(N_stops)*1000
-        for i in range(0,N_stops):         
+        D=np.ones(self.N_stops)*1000
+        for i in range(0, self.N_stops):         
             try:
                 #Get the position of the ith stop sign
-                (translation_Stop,rotation_Stop) = self.trans_listener.lookupTransform('/map', '/Stop0'+str(i), rospy.Time(0))  #Find the Transform of the ros 
+                (translation_Stop,rotation_Stop) = self.trans_listener.lookupTransform('/map', '/StopSign'+str(i), rospy.Time(0))  #Find the Transform of the ros 
                 if ( np.dot([translation_Stop[0]-self.x, translation_Stop[1]-self.y], [np.cos(self.theta),np.sin(self.theta)])>0):                 
                     D[i]=np.linalg.norm([self.x-translation_Stop[0], self.y-translation_Stop[1]])
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
