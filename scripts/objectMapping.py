@@ -73,6 +73,16 @@ class ObjectMapping:
         except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
             return
 
+        try:
+            (translation,rotation) = self.tf_listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
+            xrobot = translation[0]
+            yrobot = translation[1]
+            zrobot = translation[2]
+            euler = tf.transformations.euler_from_quaternion(rotation)
+            thetarobot = euler[2]
+        except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+            return
+
         # Now we have pose of robot, we want to determine stop sign angle relative
         # to camera frame
         thanimal = (wrapToPi(msg.thetaright) + wrapToPi(msg.thetaleft))/2.
@@ -81,6 +91,8 @@ class ObjectMapping:
 
         x = xcam + xanimal*np.cos(thetacam) - zanimal*np.sin(thetacam) 
         y = ycam + xanimal*np.sin(thetacam) + zanimal*np.cos(thetacam)
+        x = xrobot
+        y = yrobot
 
         # Now that we have x and y coord of animal in world frame, append coord
         found = False

@@ -22,8 +22,8 @@ class Phase_Supervisor():
         self.pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10)
         self.ready_pub = rospy.Publisher('/ready_to_rescue', Bool, queue_size=10)
         self.listener = tf.TransformListener()
-        rospy.Subscriber('Animal_List', DetectedAnimal , self.Track_Animals_Callback) # INCOMPLETE
-        rospy.Subscriber('Return_Ready', Bool, self.Return_Ready_Callback)
+        rospy.Subscriber('/animals', DetectedAnimal , self.Track_Animals_Callback) # INCOMPLETE
+        rospy.Subscriber('/Return_Ready', Bool, self.Return_Ready_Callback)
         rospy.Subscriber('/rescue_on', Bool, self.Rescue_Ready_Callback)
         self.phase = Phase.EXPLORE
 
@@ -125,6 +125,7 @@ class Phase_Supervisor():
                     pass
             else:
                 self.loop()
+            print self.phase
             rate.sleep()
 
 if __name__ == '__main__':
