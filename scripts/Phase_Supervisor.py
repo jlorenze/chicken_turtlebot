@@ -27,15 +27,15 @@ class Phase_Supervisor():
         rospy.Subscriber('/rescue_on', Bool, self.Rescue_Ready_Callback)
         self.phase = Phase.EXPLORE
 
-        self.startx = 0.25
-        self.starty = 0.25
+        self.startx = None
+        self.starty = None
 
         initial_pose = PoseStamped()
         for i in range(10): # Hacky shit - try to get the location of the turtle bot 10 times since it may fail the first few times.
             try:
                 (bot_loc,bot_ang) = self.listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
-                self.startx = bot_loc.pose.position.x
-                self.starty = bot_loc.pose.position.y
+                self.startx = bot_loc[0]
+                self.starty = bot_loc[1]
             except:
                 pass
 
@@ -117,8 +117,8 @@ class Phase_Supervisor():
             if (self.startx == None or self.starty == None):
                 try:
                     (bot_loc,bot_ang) = self.listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
-                    self.startx = bot_loc.pose.position.x
-                    self.starty = bot_loc.pose.position.y
+                    self.startx = bot_loc[0]
+                    self.starty = bot_loc[1]
                     print 'FINALLY!'
                 except:
                     print 'Where am I?'
