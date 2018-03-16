@@ -30,6 +30,7 @@ THETA_START_P = 1
 
 # maximum velocity
 V_MAX = .2
+# V_MAX = .15
 
 # maximim angular velocity
 W_MAX = .4
@@ -42,6 +43,10 @@ KPX = .5
 KPY = .5
 KDX = 1.5
 KDY = 1.5
+# KPX = .1
+# KPY = .1
+# KDX = .5
+# KDY = .5
 
 # smoothing condition (see splrep documentation)
 SMOOTH = .01
@@ -272,6 +277,7 @@ class Navigator:
                           [np.sin(self.theta), self.V_prev*np.cos(self.theta)]])
             a, om = linalg.solve(J, u)
             V = self.V_prev + a*dt
+            print V, om
 
             # apply saturation limits
             cmd_x_dot = np.sign(V)*min(V_MAX, np.abs(V))

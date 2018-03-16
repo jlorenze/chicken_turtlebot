@@ -186,7 +186,7 @@ class Supervisor:
     def run(self):
         rate = rospy.Rate(10) # 10 Hz
         while not rospy.is_shutdown():
-            # self.loop()
+            self.loop()
             rate.sleep()
 
 if __name__ == '__main__':
