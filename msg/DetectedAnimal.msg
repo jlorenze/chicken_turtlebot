@@ -1,3 +1,1 @@
-float64[] x
-float64[] y
-string[] animal
+string[] threadnames

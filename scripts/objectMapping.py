@@ -120,6 +120,7 @@ class ObjectMapping:
     def publishToTree(self):
         # Publish locations of animals to TF tree
         animals_published = []
+        animal_threadnames = []
         for i in range(len(self.animals)):
             counts = np.array(self.animals[i][3], 'float64')
             ratios = counts/np.sum(counts)
@@ -137,8 +138,14 @@ class ObjectMapping:
                     self.tf_broadcaster.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,0),
                                             rospy.Time.now(), threadname, 'map')
                     animals_published.append(animal)
+                    animal_threadnames.append(threadname)
+
+        object_msg = DetectedAnimal()
+        object_msg.threadnames = animal_threadnames
+        self.animalPublisher.publish(object_msg)
 
         # Publis locations of stop signs to TF tree
+        stopsign_threadnames = []
         for i in range(len(self.stopSigns[0])):
             x = self.stopSigns[0][i]
             y = self.stopSigns[1][i]
@@ -147,7 +154,12 @@ class ObjectMapping:
             threadname = 'StopSign' + str(i)
             self.tf_broadcaster.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,theta),
                                                 rospy.Time.now(), threadname, 'map')
+            stopsign_threadnames.append(threadname)
 
+        #  Publishes the stop sign threadnames
+        object_msg = DetectedStopSign()
+        object_msg.threadnames = stopsign_threadnames
+        self.stopSignPublisher.publish(object_msg)
 
     def stop_sign_detected_callback(self, msg):
         """ callback for when the detector has found a stop sign. Note that
@@ -221,14 +233,6 @@ class ObjectMapping:
             self.stopSigns[1].append(y)
             self.stopSigns[2].append(thetarobot)
             self.stopSignCounts.append(1)
-
-        # #  Publishes the detected object and its location
-        # object_msg = DetectedStopSign()
-        # object_msg.x = self.stopSigns[0]
-        # object_msg.y = self.stopSigns[1]
-        # object_msg.theta = self.stopSigns[2]
-        # self.stopSignPublisher.publish(object_msg)
-
 
     def run(self):
         rate = rospy.Rate(100) # 10 Hz
