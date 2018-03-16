@@ -70,7 +70,7 @@ class Supervisor:
         rotation = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
         euler = tf.transformations.euler_from_quaternion(rotation)
         self.theta_g = euler[2]
-        
+
         #Include this condition to do good stopping
         if self.mode == Mode.IDLE:
             self.mode = Mode.NAV
@@ -115,24 +115,24 @@ class Supervisor:
     def check_distances(self):
         N_stops=7
         D=np.ones(N_stops)*1000
-        for i in range(0,N_stops):         
+        for i in range(0,N_stops):
             try:
                 #Get the position of the ith stop sign
-                (translation_Stop,rotation_Stop) = self.trans_listener.lookupTransform('/map', '/Stop0'+str(i), rospy.Time(0))  #Find the Transform of the ros 
-                if ( np.dot([translation_Stop[0]-self.x, translation_Stop[1]-self.y], [np.cos(self.theta),np.sin(self.theta)])>0):                 
+                (translation_Stop,rotation_Stop) = self.trans_listener.lookupTransform('/map', '/Stop0'+str(i), rospy.Time(0))  #Find the Transform of the ros
+                if ( np.dot([translation_Stop[0]-self.x, translation_Stop[1]-self.y], [np.cos(self.theta),np.sin(self.theta)])>0):
                     D[i]=np.linalg.norm([self.x-translation_Stop[0], self.y-translation_Stop[1]])
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 print('Fail to find transform')
-                pass       
+                pass
         min_distance = np.min(D)
         print(D)
         print(min_distance)
         if min_distance < STOP_MIN_DIST:
-            self.init_stop_sign() 
+            self.init_stop_sign()
 
 
-                
-                
+
+
         #self.x = 0
         #self.y = 0
         #self.theta = 0

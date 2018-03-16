@@ -19,9 +19,9 @@ def Publish_to_tf():
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         br = tf.TransformBroadcaster()
-        br.sendTransform((1, 2, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Animal00', 'map')
+        br.sendTransform((2, 0.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Animal00', 'map')
         br.sendTransform((1.5, 1.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Animal01', 'map')
-        br.sendTransform((0.5, 1.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Animal02', 'map')
+        br.sendTransform((0.5, 0.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Animal02', 'map')
 
         msg = DetectedAnimal()
         msg.threadnames = ['Animal00', 'Animal01', 'Animal02']
