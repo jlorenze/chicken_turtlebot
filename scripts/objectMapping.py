@@ -26,7 +26,7 @@ class ObjectMapping:
         self.stopSignPublisher = rospy.Publisher('/stopSigns', DetectedStopSign, queue_size=10)
 
         # Animals
-        self.tabooList = ['laptop', 'stop_sign', 'chair', 'person','traffic_light','potted_plant','teddy_bear']
+        self.lookFor = ['/detector/cat','/detector/dog','/detector/bear','/detector/elephant']
         self.animals = []
         self.animalPublisher = rospy.Publisher('/animals', DetectedAnimal, queue_size=10)
 
@@ -40,7 +40,7 @@ class ObjectMapping:
     def searchForTopics(self):
         topics = rospy.get_published_topics(namespace='/detector')
         for topic in topics:
-            if topic[0] not in self.topicNames and topic[0] != '/detector/stop_sign' and topic[0] != '/detector/person':
+            if topic[0] not in self.topicNames and topic[0] in self.lookFor:
                 self.topicNames.append(topic[0])
                 rospy.Subscriber(topic[0], DetectedObject, self.animal_detected_callback)
 
@@ -118,7 +118,7 @@ class ObjectMapping:
             self.animals.append(newanimal)
 
     def publishToTree(self):
-        # Publish locations to TF tree
+        # Publish locations of animals to TF tree
         animals_published = []
         for i in range(len(self.animals)):
             counts = np.array(self.animals[i][3], 'float64')
@@ -138,25 +138,16 @@ class ObjectMapping:
                                             rospy.Time.now(), threadname, 'map')
                     animals_published.append(animal)
 
-        # #  Publishes the detected object and its location
-        # object_msg = DetectedAnimal()
-        # object_msg.x = self.animals[0]
-        # object_msg.y = self.animals[1]
-        # object_msg.animal = self.animals[2]
-        # self.animalPublisher.publish(object_msg)
+        # Publis locations of stop signs to TF tree
+        for i in range(len(self.stopSigns[0])):
+            x = self.stopSigns[0][i]
+            y = self.stopSigns[1][i]
+            z = 0.
+            theta = self.stopSigns[2][i]
+            threadname = 'StopSign' + str(i)
+            self.tf_broadcaster.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,theta),
+                                                rospy.Time.now(), threadname, 'map')
 
-        # # publish current desired x and y for visualization only
-        # pathsp_msg = PoseStamped()
-        # pathsp_msg.header.frame_id = 'map'
-        # pathsp_msg.pose.position.x = self.animals[0][0]
-        # pathsp_msg.pose.position.y = self.animals[1][0]
-        # theta_d = 0.0
-        # quat_d = tf.transformations.quaternion_from_euler(0, 0, theta_d)
-        # pathsp_msg.pose.orientation.x = quat_d[0]
-        # pathsp_msg.pose.orientation.y = quat_d[1]
-        # pathsp_msg.pose.orientation.z = quat_d[2]
-        # pathsp_msg.pose.orientation.w = quat_d[3]
-        # self.animal_pos_pub.publish(pathsp_msg)
 
     def stop_sign_detected_callback(self, msg):
         """ callback for when the detector has found a stop sign. Note that
@@ -231,12 +222,13 @@ class ObjectMapping:
             self.stopSigns[2].append(thetarobot)
             self.stopSignCounts.append(1)
 
-        #  Publishes the detected object and its location
-        object_msg = DetectedStopSign()
-        object_msg.x = self.stopSigns[0]
-        object_msg.y = self.stopSigns[1]
-        object_msg.theta = self.stopSigns[2]
-        self.stopSignPublisher.publish(object_msg)
+        # #  Publishes the detected object and its location
+        # object_msg = DetectedStopSign()
+        # object_msg.x = self.stopSigns[0]
+        # object_msg.y = self.stopSigns[1]
+        # object_msg.theta = self.stopSigns[2]
+        # self.stopSignPublisher.publish(object_msg)
+
 
     def run(self):
         rate = rospy.Rate(100) # 10 Hz
