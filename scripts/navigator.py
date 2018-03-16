@@ -110,15 +110,38 @@ class Navigator:
 
     def map_callback(self,msg):
         self.map_probs = msg.data
+        
         if self.map_width>0 and self.map_height>0 and len(self.map_probs)>0:
+            probs = self.buffer()
             self.occupancy = StochOccupancyGrid2D(self.map_resolution,
                                                   self.map_width,
                                                   self.map_height,
                                                   self.map_origin[0],
                                                   self.map_origin[1],
                                                   8,
-                                                  self.map_probs)
+                                                  probs)
             self.occupancy_updated = True
+
+    def buffer(self):
+        orig = np.array(self.map_probs)
+        orig = orig.reshape(self.map_height, self.map_width)
+        copy = np.copy(orig)
+        for i in range(1, copy.shape[0] - 1):
+            for j in range(1, copy.shape[1] - 1):
+                if orig[i,j] is not -1:
+                    nx = [i-1, i-1, i-1, i, i+1, i+1, i+1, i, i]
+                    ny = [j+1, j, j-1, j-1, j-1, j, j+1, j+1, j]
+                    maxval = 0
+                    for i, x in enumerate(nx):
+                        if orig[x,ny[i]] > maxval:
+                            maxval = orig[x,ny[i]]
+                if orig[i,j] is not -1:
+                    copy[i,j] = maxval
+                elif maxval >= 0:
+                    copy[i,j] = 55
+
+        copy = copy.flatten()
+        return copy.tolist()
 
     def close_to_end_location(self):
         return (abs(self.x-self.x_g)<END_POS_THRESH and abs(self.y-self.y_g)<END_POS_THRESH)
@@ -135,7 +158,6 @@ class Navigator:
 
     def run_navigator(self):
         """ computes a path from current state to goal state using A* and sends it to the path controller """
-
         # makes sure we have a location
         try:
             (translation,rotation) = self.trans_listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
@@ -277,7 +299,6 @@ class Navigator:
                           [np.sin(self.theta), self.V_prev*np.cos(self.theta)]])
             a, om = linalg.solve(J, u)
             V = self.V_prev + a*dt
-            print V, om
 
             # apply saturation limits
             cmd_x_dot = np.sign(V)*min(V_MAX, np.abs(V))
