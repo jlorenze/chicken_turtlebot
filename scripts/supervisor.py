@@ -22,7 +22,7 @@ STOP_TIME = 3
 STOP_MIN_DIST = .5
 
 # time taken to cross an intersection
-CROSSING_TIME = 3
+CROSSING_TIME = 6
 
 # state machine modes, not all implemented
 class Mode(Enum):
@@ -70,8 +70,10 @@ class Supervisor:
         rotation = [msg.pose.orientation.x, msg.pose.orientation.y, msg.pose.orientation.z, msg.pose.orientation.w]
         euler = tf.transformations.euler_from_quaternion(rotation)
         self.theta_g = euler[2]
-
-        self.mode = Mode.NAV
+        
+        #Include this condition to do good stopping
+        if self.mode == Mode.IDLE:
+            self.mode = Mode.NAV
 
     def go_to_pose(self):
         """ sends the current desired pose to the pose controller """
@@ -109,6 +111,31 @@ class Supervisor:
 
         self.stop_sign_start = rospy.get_rostime()
         self.mode = Mode.STOP
+
+    def check_distances(self):
+        N_stops=7
+        D=np.ones(N_stops)*1000
+        for i in range(0,N_stops):         
+            try:
+                #Get the position of the ith stop sign
+                (translation_Stop,rotation_Stop) = self.trans_listener.lookupTransform('/map', '/Stop0'+str(i), rospy.Time(0))  #Find the Transform of the ros 
+                if ( np.dot([translation_Stop[0]-self.x, translation_Stop[1]-self.y], [np.cos(self.theta),np.sin(self.theta)])>0):                 
+                    D[i]=np.linalg.norm([self.x-translation_Stop[0], self.y-translation_Stop[1]])
+            except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
+                print('Fail to find transform')
+                pass       
+        min_distance = np.min(D)
+        print(D)
+        print(min_distance)
+        if min_distance < STOP_MIN_DIST:
+            self.init_stop_sign() 
+
+
+                
+                
+        #self.x = 0
+        #self.y = 0
+        #self.theta = 0
 
     def has_stopped(self):
         """ checks if stop sign maneuver is over """
@@ -153,6 +180,7 @@ class Supervisor:
             self.stay_idle()
 
         elif self.mode == Mode.POSE:
+            self.check_distances()
             # moving towards a desired pose
             if self.close_to(self.x_g,self.y_g,self.theta_g):
                 self.mode = Mode.IDLE
@@ -161,6 +189,7 @@ class Supervisor:
 
         elif self.mode == Mode.STOP:
             # at a stop sign
+            self.stay_idle() #Send actual zero velocities
             if self.has_stopped():
                 self.init_crossing()
             else:
@@ -174,6 +203,7 @@ class Supervisor:
                 self.nav_to_pose()
 
         elif self.mode == Mode.NAV:
+            self.check_distances()
             if self.close_to(self.x_g,self.y_g,self.theta_g):
                 self.mode = Mode.IDLE
             else:
