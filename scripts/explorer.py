@@ -84,7 +84,7 @@ class Explorer:
             self.occupancy_updated = True
 
     def close_to_end_location(self):
-        return (abs(self.x-self.x_g)<END_POS_THRESH and abs(self.y-self.y_g)<END_POS_THRESH)
+        return (abs(self.x-self.x_g)<END_POS_THRESH and abs(self.y-self.y_g)<END_POS_THRESH and abs(self.theta-self.theta_g)<END_POS_THRESH)
 
     def snap_to_grid(self, x):
         return (self.map_resolution*round(x[0]/self.map_resolution), self.map_resolution*round(x[1]/self.map_resolution))
@@ -129,7 +129,7 @@ class Explorer:
 						neigh_val = self.get_prob(neigh)
 						if self.occupancy.is_free(neigh):
 							searched_list[neigh] = i
-						elif neigh_val is -1:
+						elif (neigh_val is -1) and (i>10):
 							return neigh
 	return None
 
@@ -161,15 +161,16 @@ class Explorer:
 		nav_point = self.grid_search()
 		print("pos: ", (self.x, self.y))
 		print("goal: ", nav_point)
-		self.x_g = nav_point[0]
-		self.y_g = nav_point[1]
-		self.theta_g = 0.0
+		if nav_point:
+			self.x_g = nav_point[0]
+			self.y_g = nav_point[1]
+			self.theta_g = 0.0
 
-		nav_msg = Pose2D()
-		nav_msg.x = self.x_g
-		nav_msg.y = self.y_g
-		nav_msg.theta = self.theta_g
-		self.nav_pos_pub.publish(nav_msg)
+			nav_msg = Pose2D()
+			nav_msg.x = self.x_g
+			nav_msg.y = self.y_g
+			nav_msg.theta = self.theta_g
+			self.nav_pos_pub.publish(nav_msg)
 
 
 if __name__ == '__main__':
