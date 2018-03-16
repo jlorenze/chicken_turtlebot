@@ -123,6 +123,8 @@ class AStar(object):
     # OUTPUT: Boolean, True if a solution from x_init to x_goal was found
     def solve(self):
         while len(self.open_set)>0:
+            if len(self.open_set) > 50:
+                return False
             current = self.find_best_f_score()
             if current == self.x_goal:
                 self.path = self.reconstruct_path() 
