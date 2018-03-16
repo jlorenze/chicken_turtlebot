@@ -1,0 +1,4 @@
+<launch>
+  <node pkg="chicken_turtlebot" type="detector.py" name="turtlebot_detector" output="screen"/>
+  <node pkg="chicken_turtlebot" type="objectMapping.py" name="turtlebot_object_mapping" />
+</launch>

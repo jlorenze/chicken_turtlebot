@@ -26,8 +26,8 @@ class ObjectMapping:
         self.stopSignPublisher = rospy.Publisher('/stopSigns', DetectedStopSign, queue_size=10)
 
         # Animals
-        self.animals = [[],[],[]]
-        self.animalCounts = []
+        self.tabooList = ['laptop', 'stop_sign', 'chair', 'person','traffic_light','potted_plant','teddy_bear']
+        self.animals = []
         self.animalPublisher = rospy.Publisher('/animals', DetectedAnimal, queue_size=10)
 
         self.animal_pos_pub = rospy.Publisher('/animal_pos', PoseStamped, queue_size=10)
@@ -40,7 +40,7 @@ class ObjectMapping:
     def searchForTopics(self):
         topics = rospy.get_published_topics(namespace='/detector')
         for topic in topics:
-            if topic[0] not in self.topicNames and topic[0] != '/detector/stop_sign':
+            if topic[0] not in self.topicNames and topic[0] != '/detector/stop_sign' and topic[0] != '/detector/person':
                 self.topicNames.append(topic[0])
                 rospy.Subscriber(topic[0], DetectedObject, self.animal_detected_callback)
 
@@ -60,7 +60,7 @@ class ObjectMapping:
         if dy > pixelheight[-1] and dy < pixelheight[0]:
             dist = np.interp(dy, pixelheight[::-1], rdist[::-1])
         else:
-            return
+            dist = rdist[-1]
 
         # Get location of camera with respect to the map
         try:
@@ -84,37 +84,59 @@ class ObjectMapping:
 
         # Now that we have x and y coord of animal in world frame, append coord
         found = False
-        for i in range(len(self.animals[0])):
-            xcur = self.animals[0][i]
-            ycur = self.animals[1][i]
+        for i in range(len(self.animals)):
+            xcur = self.animals[i][0]
+            ycur = self.animals[i][1]
             distance = np.sqrt((x - xcur)**2 + (y - ycur)**2)
-            n = self.animalCounts[i]
-            if distance < .2 and self.animals[2][i] == animal:
-                if n < 100:
-                    # We have found the same stop sign as before
-                    xnew = (n/(n+1.))*xcur + (1./(n+1))*x
-                    ynew = (n/(n+1.))*ycur + (1./(n+1))*y
-                    self.animals[0][i] = xnew
-                    self.animals[1][i] = ynew
-                    self.animalCounts[i] += 1
+            if distance < .4:
+                # We have found something here before
+                foundAnimal = False
+                for j in range(len(self.animals[i][2])):
+                    n = self.animals[i][3][j]
+                    
+                    # We are in close proximity to old animal found
+                    if self.animals[i][2][j] == animal:
+                        # Probably same animal, just update
+                        # We have found the same animal as before
+                        xnew = (n/(n+1.))*xcur + (1./(n+1))*x
+                        ynew = (n/(n+1.))*ycur + (1./(n+1))*y
+                        self.animals[i][0] = xnew
+                        self.animals[i][1] = ynew
+                        self.animals[i][3][j] += 1
+                        foundAnimal = True
+
+                if not foundAnimal:
+                    # New animal in this location
+                    self.animals[i][2].append(animal)
+                    self.animals[i][3].append(1)
+
                 found = True
         
         if not found:
             # Found a new one, append it
-            self.animals[0].append(x)
-            self.animals[1].append(y)
-            self.animals[2].append(animal)
-            self.animalCounts.append(1)
+            newanimal = [x, y, [animal], [1]]
+            self.animals.append(newanimal)
 
-
+    def publishToTree(self):
         # Publish locations to TF tree
-        for i in range(len(self.animals[0])):
-            x = self.animals[0][i]
-            y = self.animals[1][i]
-            z = 0.
-            animal = self.animals[2][i]
-            self.tf_broadcaster.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,0),
-                                    rospy.Time.now(),animal,'map')
+        animals_published = []
+        for i in range(len(self.animals)):
+            counts = np.array(self.animals[i][3], 'float64')
+            ratios = counts/np.sum(counts)
+            for j in range(len(self.animals[i][2])):
+                if ratios[j] > 0:
+                    x = self.animals[i][0]
+                    y = self.animals[i][1]
+                    z = 0.
+                    animal = self.animals[i][2][j]
+                    if animal in animals_published:
+                        N = animals_published.count(animal)
+                        threadname = animal + str(int(N))
+                    else:
+                        threadname = animal + str(0)
+                    self.tf_broadcaster.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,0),
+                                            rospy.Time.now(), threadname, 'map')
+                    animals_published.append(animal)
 
         # #  Publishes the detected object and its location
         # object_msg = DetectedAnimal()
@@ -220,6 +242,7 @@ class ObjectMapping:
         rate = rospy.Rate(100) # 10 Hz
         while not rospy.is_shutdown():
             self.searchForTopics()
+            self.publishToTree()
             rate.sleep()
 
 
