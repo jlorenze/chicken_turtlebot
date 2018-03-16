@@ -190,7 +190,7 @@ class Supervisor:
             self.stay_idle()
 
         elif self.mode == Mode.POSE:
-            self.check_distances()
+            # self.check_distances()
             # moving towards a desired pose
             if self.close_to(self.x_g,self.y_g,self.theta_g):
                 self.mode = Mode.IDLE
@@ -213,7 +213,7 @@ class Supervisor:
                 self.nav_to_pose()
 
         elif self.mode == Mode.NAV:
-            self.check_distances()
+            # self.check_distances()
             if self.close_to(self.x_g,self.y_g,self.theta_g):
                 self.mode = Mode.IDLE
             else:
