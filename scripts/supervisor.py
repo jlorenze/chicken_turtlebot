@@ -2,7 +2,7 @@
 
 import rospy
 from gazebo_msgs.msg import ModelStates
-from std_msgs.msg import Float32MultiArray, String
+from std_msgs.msg import Float32MultiArray, String, Bool
 from geometry_msgs.msg import Twist, PoseArray, Pose2D, PoseStamped
 from chicken_turtlebot.msg import DetectedObject
 import tf
@@ -62,7 +62,7 @@ class Supervisor:
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
 
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.rviz_goal_callback)
-        rospy.Subscriber('/override', Bool, self.overrider_callback)
+        rospy.Subscriber('/overrider', Bool, self.overrider_callback)
 
         self.trans_listener = tf.TransformListener()
     
@@ -220,7 +220,7 @@ class Supervisor:
                 self.nav_to_pose()
 
         elif self.mode == Mode.MANUAL:
-            if (rospy.get_rostime()-self.manual_start_time)>rospy.Duration.from_sec(MANUAL_TIME)):
+            if ((rospy.get_rostime()-self.manual_start_time)>rospy.Duration.from_sec(MANUAL_TIME)):
                 self.mode == self.prev_auto_mode
             else:
                 pass

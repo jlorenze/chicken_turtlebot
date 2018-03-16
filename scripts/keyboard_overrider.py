@@ -32,7 +32,7 @@
 import rospy
 
 from geometry_msgs.msg import Twist
-
+from std_msgs.msg import Float32MultiArray, String, Bool
 import sys, select, termios, tty
 
 msg = """
