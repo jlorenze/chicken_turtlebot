@@ -112,13 +112,14 @@ class Navigator:
         self.map_probs = msg.data
         
         if self.map_width>0 and self.map_height>0 and len(self.map_probs)>0:
-            probs = self.buffer()
+            # probs = self.buffer()
+            probs = self.map_probs
             self.occupancy = StochOccupancyGrid2D(self.map_resolution,
                                                   self.map_width,
                                                   self.map_height,
                                                   self.map_origin[0],
                                                   self.map_origin[1],
-                                                  8,
+                                                  6, # 8
                                                   probs)
             self.occupancy_updated = True
 

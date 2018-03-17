@@ -20,13 +20,13 @@ def Publish_to_tf():
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         br = tf.TransformBroadcaster()
-        br.sendTransform((2.1, 2.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 3.14), rospy.Time.now(), 'Stop00', 'map')
-        br.sendTransform((2.6, 0.6, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Stop01', 'map')
-        br.sendTransform((0.6, 0.6, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Stop02', 'map')
-        br.sendTransform((0.6, 1.8, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Stop03', 'map')
-        br.sendTransform((2.0, 0.7, 0.), tf.transformations.quaternion_from_euler(0, 0, 1.57), rospy.Time.now(), 'Stop04', 'map')
-        br.sendTransform((2.6, 2.5, 0.), tf.transformations.quaternion_from_euler(0, 0, -1.57), rospy.Time.now(), 'Stop05', 'map')
-        br.sendTransform((2.0, 1.8, 0.), tf.transformations.quaternion_from_euler(0, 0, 1.57), rospy.Time.now(), 'Stop06', 'map')
+        br.sendTransform((2.1, 2.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 3.14), rospy.Time.now(), 'StopSign0', 'map')
+        br.sendTransform((2.6, 0.6, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'StopSign1', 'map')
+        br.sendTransform((0.6, 0.6, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'StopSign2', 'map')
+        br.sendTransform((0.6, 1.8, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'StopSign3', 'map')
+        br.sendTransform((2.0, 0.7, 0.), tf.transformations.quaternion_from_euler(0, 0, 1.57), rospy.Time.now(), 'StopSign4', 'map')
+        br.sendTransform((2.6, 2.5, 0.), tf.transformations.quaternion_from_euler(0, 0, -1.57), rospy.Time.now(), 'StopSign5', 'map')
+        br.sendTransform((2.0, 1.8, 0.), tf.transformations.quaternion_from_euler(0, 0, 1.57), rospy.Time.now(), 'StopSign6', 'map')
 
         br.sendTransform((3.2, 1.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'BaseStation', 'map')
         br.sendTransform((2, 0.5, 0.), tf.transformations.quaternion_from_euler(0, 0, 0), rospy.Time.now(), 'Animal00', 'map')

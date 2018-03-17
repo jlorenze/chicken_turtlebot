@@ -28,6 +28,7 @@ class ObjectMapping:
         # Animals
         self.lookFor = ['/detector/cat','/detector/dog','/detector/bear','/detector/elephant']
         self.animals = []
+        self.actualAnimals = []
         self.animalPublisher = rospy.Publisher('/animals', DetectedAnimal, queue_size=10)
 
         self.animal_pos_pub = rospy.Publisher('/animal_pos', PoseStamped, queue_size=10)
@@ -89,11 +90,8 @@ class ObjectMapping:
         zanimal = dist*np.cos(-thanimal)
         xanimal = dist*np.sin(-thanimal)
 
-        x = xcam + xanimal*np.cos(thetacam) - zanimal*np.sin(thetacam) 
-        y = ycam + xanimal*np.sin(thetacam) + zanimal*np.cos(thetacam)
         x = xrobot
         y = yrobot
-
         # Now that we have x and y coord of animal in world frame, append coord
         found = False
         for i in range(len(self.animals)):
@@ -129,6 +127,43 @@ class ObjectMapping:
             newanimal = [x, y, [animal], [1]]
             self.animals.append(newanimal)
 
+
+        x = xcam + xanimal*np.cos(thetacam) - zanimal*np.sin(thetacam) 
+        y = ycam + xanimal*np.sin(thetacam) + zanimal*np.cos(thetacam)
+        found = False
+        for i in range(len(self.actualAnimals)):
+            xcur = self.actualAnimals[i][0]
+            ycur = self.actualAnimals[i][1]
+            distance = np.sqrt((x - xcur)**2 + (y - ycur)**2)
+            if distance < .4:
+                # We have found something here before
+                foundAnimal = False
+                for j in range(len(self.actualAnimals[i][2])):
+                    n = self.actualAnimals[i][3][j]
+                    
+                    # We are in close proximity to old animal found
+                    if self.actualAnimals[i][2][j] == animal:
+                        # Probably same animal, just update
+                        # We have found the same animal as before
+                        xnew = (n/(n+1.))*xcur + (1./(n+1))*x
+                        ynew = (n/(n+1.))*ycur + (1./(n+1))*y
+                        self.actualAnimals[i][0] = xnew
+                        self.actualAnimals[i][1] = ynew
+                        self.actualAnimals[i][3][j] += 1
+                        foundAnimal = True
+
+                if not foundAnimal:
+                    # New animal in this location
+                    self.actualAnimals[i][2].append(animal)
+                    self.actualAnimals[i][3].append(1)
+
+                found = True
+        
+        if not found:
+            # Found a new one, append it
+            newanimal = [x, y, [animal], [1]]
+            self.actualAnimals.append(newanimal)
+
     def publishToTree(self):
         # Publish locations of animals to TF tree
         animals_published = []
@@ -155,6 +190,26 @@ class ObjectMapping:
         object_msg = DetectedAnimal()
         object_msg.threadnames = animal_threadnames
         self.animalPublisher.publish(object_msg)
+
+        # Publish locations of actual animals to TF tree
+        actualAnimals_published = []
+        for i in range(len(self.actualAnimals)):
+            counts = np.array(self.actualAnimals[i][3], 'float64')
+            ratios = counts/np.sum(counts)
+            for j in range(len(self.actualAnimals[i][2])):
+                if ratios[j] > 0:
+                    x = self.actualAnimals[i][0]
+                    y = self.actualAnimals[i][1]
+                    z = 0.
+                    animal = self.actualAnimals[i][2][j]
+                    if animal in actualAnimals_published:
+                        N = actualAnimals_published.count(animal)
+                        threadname = 'actual_' + animal + str(int(N))
+                    else:
+                        threadname = 'actual_' + animal + str(0)
+                    self.tf_broadcaster.sendTransform((x,y,z), tf.transformations.quaternion_from_euler(0,0,0),
+                                            rospy.Time.now(), threadname, 'map')
+                    actualAnimals_published.append(animal)
 
         # Publis locations of stop signs to TF tree
         stopsign_threadnames = []

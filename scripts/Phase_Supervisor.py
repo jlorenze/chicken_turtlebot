@@ -69,7 +69,7 @@ class Phase_Supervisor():
                 goal = np.asarray(translation_Cat)
 
                 goal_dist = np.sum((goal - state)**2)**0.5
-                print('dist to goal: %s' % goal_dist)
+                print('%s: dist to goal: %s' % (goal_string,goal_dist))
             except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
                 print('Fail')
                 pass

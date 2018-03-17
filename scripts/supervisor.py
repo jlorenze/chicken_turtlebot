@@ -70,9 +70,11 @@ class Supervisor:
         self.trans_listener = tf.TransformListener()
     
     def overrider_callback(self, msg):
-        if msg == True:
-            self.prev_auto_mode = self.mode
+        if msg.data == True:
+            if self.mode != Mode.MANUAL:
+                self.prev_auto_mode = self.mode
             self.manual_start_time = rospy.get_rostime()
+            self.getT0()
             self.mode = Mode.MANUAL
 
     def stopsign_callback(self, msg):
@@ -80,6 +82,9 @@ class Supervisor:
 
     def rviz_goal_callback(self, msg):
         """ callback for a pose goal sent through rviz """
+
+        if self.mode == Mode.MANUAL:
+            return
 
         self.x_g = msg.pose.position.x
         self.y_g = msg.pose.position.y
@@ -129,6 +134,9 @@ class Supervisor:
         self.mode = Mode.STOP
 
     def check_distances(self):
+        if self.N_stops == 0:
+            return
+
         D=np.ones(self.N_stops)*1000
         for i in range(0, self.N_stops):         
             try:
@@ -140,18 +148,10 @@ class Supervisor:
                 print('Fail to find transform')
                 pass       
         min_distance = np.min(D)
-        print(D)
         print(min_distance)
         if min_distance < STOP_MIN_DIST:
             self.init_stop_sign() 
-
-
                 
-                
-        #self.x = 0
-        #self.y = 0
-        #self.theta = 0
-
     def has_stopped(self):
         """ checks if stop sign maneuver is over """
 
@@ -167,6 +167,14 @@ class Supervisor:
         """ checks if crossing maneuver is over """
 
         return (self.mode == Mode.CROSS and (rospy.get_rostime()-self.cross_start)>rospy.Duration.from_sec(CROSSING_TIME))
+
+    def getT0(self):
+        started = False
+        while not started:
+            t = rospy.get_time()
+            if t != 0:
+                started = True
+        self.t0 = t
 
     def loop(self):
         """ the main loop of the robot. At each iteration, depending on its
@@ -191,14 +199,16 @@ class Supervisor:
 
         # checks wich mode it is in and acts accordingly
         if self.mode == Mode.IDLE:
-            # send zero velocity
-            self.stay_idle()
+            # do nothing
+            pass
+            
 
         elif self.mode == Mode.POSE:
-            # self.check_distances()
+            self.check_distances()
             # moving towards a desired pose
             if self.close_to(self.x_g,self.y_g,self.theta_g):
                 self.mode = Mode.IDLE
+                self.stay_idle()
             else:
                 self.go_to_pose()
 
@@ -218,15 +228,17 @@ class Supervisor:
                 self.nav_to_pose()
 
         elif self.mode == Mode.NAV:
-            # self.check_distances()
+            self.check_distances()
             if self.close_to(self.x_g,self.y_g,self.theta_g):
                 self.mode = Mode.IDLE
+                self.stay_idle()
             else:
                 self.nav_to_pose()
 
         elif self.mode == Mode.MANUAL:
-            if ((rospy.get_rostime()-self.manual_start_time)>rospy.Duration.from_sec(MANUAL_TIME)):
-                self.mode == self.prev_auto_mode
+            # if ((rospy.get_rostime()-self.manual_start_time)>rospy.Duration.from_sec(MANUAL_TIME)):
+            if rospy.get_time() - self.t0 > 2.5: 
+                self.mode = self.prev_auto_mode
             else:
                 pass
 
