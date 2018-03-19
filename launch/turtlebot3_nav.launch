@@ -1,5 +1,5 @@
 <launch>
   <node pkg="chicken_turtlebot" type="supervisor.py" name="turtlebot_supervisor" output="screen"/>
   <node pkg="chicken_turtlebot" type="pose_controller.py" name="turtlebot_pose_controller" />
-  <node pkg="chicken_turtlebot" type="navigator.py" name="turtlebot_navigator" />
+  <!--<node pkg="chicken_turtlebot" type="navigator.py" name="turtlebot_navigator" />-->
 </launch>
