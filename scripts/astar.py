@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+import pdb
 
 # Represents a motion planning problem to be solved using A*
 class AStar(object):
@@ -123,8 +124,12 @@ class AStar(object):
     # OUTPUT: Boolean, True if a solution from x_init to x_goal was found
     def solve(self):
         while len(self.open_set)>0:
+            # if len(self.closed_set) > 2000:
+            #     break
             current = self.find_best_f_score()
-            if current == self.x_goal:
+            # if current == self.x_goal:
+            if np.linalg.norm(np.asarray(current)-np.asarray(self.x_goal)) < self.resolution:
+                self.came_from[self.x_goal] = self.came_from[current]
                 self.path = self.reconstruct_path() 
                 return True
             self.open_set.remove(current)
@@ -141,7 +146,20 @@ class AStar(object):
                 self.g_score[neighbor] = tentative_g_score
                 self.f_score[neighbor] = tentative_g_score + self.distance(neighbor, self.x_goal)
 
-        return False
+        print 'Not finding optimal path'
+        minval = np.inf
+        newpoint = None
+        for point in self.closed_set:
+            if self.distance(point, self.x_goal) < minval:
+                minval = self.distance(point, self.x_goal)
+                newpoint = point
+
+        if newpoint is not None:
+            self.x_goal = newpoint
+            self.path = self.reconstruct_path() 
+            return True
+        else:
+            return False
 
 # A 2D state space grid with a set of rectangular obstacles. The grid is fully deterministic
 class DetOccupancyGrid2D(object):
