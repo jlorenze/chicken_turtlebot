@@ -86,7 +86,7 @@ class Phase_Supervisor():
             self.phase = Phase.RETURN
 
     def Rescue_Ready_Callback(self, msg):
-        if (msg.data == True):
+        if (msg.data == True) and (self.phase == Phase.RETURN):          
             self.phase = Phase.RESCUE
 
     def Rescue(self):

@@ -169,13 +169,12 @@ class AStar(object):
         while i < 3:
             i += 1
             for point in searched_list.keys():
-            	if (searched_list[point] == (i-1)):
-		    neigh_list = self.get_neighbors(point)
-		    if len(neigh_list) < 8:
-			return(4-i)
-                    
+                if (searched_list[point] == (i-1)):
+                    neigh_list = self.get_neighbors(point)
+                    if len(neigh_list) < 8:
+                        return(4-i)
                     for neigh in neigh_list:
-                       	if neigh not in searched_list.keys():
+                        if neigh not in searched_list.keys():
                             searched_list[neigh] = i
                             
         return 0

@@ -26,7 +26,7 @@ class ObjectMapping:
         self.stopSignPublisher = rospy.Publisher('/stopSigns', DetectedStopSign, queue_size=10)
 
         # Animals
-        self.lookFor = ['/detector/cat','/detector/dog','/detector/bear','/detector/elephant']
+        self.lookFor = ['/detector/cat','/detector/dog','/detector/bear','/detector/elephant', '/detector/teddybear']
         self.animals = []
         self.actualAnimals = []
         self.animalPublisher = rospy.Publisher('/animals', DetectedAnimal, queue_size=10)

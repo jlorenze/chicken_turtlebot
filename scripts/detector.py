@@ -220,7 +220,21 @@ class Detector:
                 xcen = int(0.5*(xmax-xmin)+xmin)
                 ycen = int(0.5*(ymax-ymin)+ymin)
 
-                cv2.rectangle(img_bgr8, (xmin,ymin), (xmax,ymax), (255,0,0), 2)
+                #cv2.rectangle(img_bgr8, (xmin,ymin), (xmax,ymax), (255,0,0), 2)
+
+                # Nathan: This is piazza code that makes the bounding boxes look better
+                # Default bounding box color = blue
+                draw_color = (255,0,0)
+	            # If detected animal, color = green
+                if self.object_labels[cl] in ANIMAL_LABELS:
+                    draw_color = (0,255,0)
+	            # If detected stop sign, color = red
+	            elif self.object_labels[cl] == 'stop_sign':
+	                draw_color = (0,0,255)
+
+	            # Draw bounding box and text label
+                cv2.rectangle(img_bgr8, (xmin,ymin), (xmax,ymax), draw_color, 2)
+                cv2.putText(img_bgr8, self.object_labels[cl], (xmin, ymin-10), CV2_FONT, .5, draw_color)
 
                 # computes the vectors in camera frame corresponding to each sides of the box
                 rayleft = self.project_pixel_to_ray(xmin,ycen)
