@@ -122,7 +122,7 @@ class AStar(object):
     # from self.x_init to self.x_goal inside the variable self.path
     # INPUT: None
     # OUTPUT: Boolean, True if a solution from x_init to x_goal was found
-    def solve(self):
+    def solve(self, k_obstacle = 0.0):
         while len(self.open_set)>0:
             # if len(self.closed_set) > 2000:
             #     break
@@ -144,7 +144,7 @@ class AStar(object):
                     continue
                 self.came_from[neighbor] = current # NOT SURE HERE, MIGHT BE THE OPPOSITE
                 self.g_score[neighbor] = tentative_g_score
-                self.f_score[neighbor] = tentative_g_score + self.distance(neighbor, self.x_goal)
+                self.f_score[neighbor] = tentative_g_score + self.distance(neighbor, self.x_goal) + k_obstacle * self.computeObstacleScore(neighbor)
 
         print 'Not finding optimal path'
         minval = np.inf
@@ -160,6 +160,27 @@ class AStar(object):
             return True
         else:
             return False
+
+    def computeObstacleScore(self, point):
+        i = 0
+        searched_list = {}
+        searched_list[self.snap_to_grid(point)] = 0
+
+        while i < 3:
+            i += 1
+            for point in searched_list.keys():
+            	if (searched_list[point] == (i-1)):
+		    neigh_list = self.get_neighbors(point)
+		    if len(neigh_list) < 8:
+			return(4-i)
+                    
+                    for neigh in neigh_list:
+                       	if neigh not in searched_list.keys():
+                            searched_list[neigh] = i
+                            
+        return 0
+
+
 
 # A 2D state space grid with a set of rectangular obstacles. The grid is fully deterministic
 class DetOccupancyGrid2D(object):
