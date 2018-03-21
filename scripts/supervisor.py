@@ -62,6 +62,7 @@ class Supervisor:
         self.nav_goal_publisher = rospy.Publisher('/cmd_nav', Pose2D, queue_size=10)
         self.pose_goal_publisher = rospy.Publisher('/cmd_pose', Pose2D, queue_size=10)
         self.cmd_vel_publisher = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        self.sup_status_publisher = rospy.Publisher('/sup_status', String, queue_size=10)
 
         rospy.Subscriber('/move_base_simple/goal', PoseStamped, self.rviz_goal_callback)
         rospy.Subscriber('/overrider', Bool, self.overrider_callback)
@@ -181,6 +182,8 @@ class Supervisor:
         mode (i.e. the finite state machine's state), if takes appropriate
         actions. This function shouldn't return anything """
 
+
+
         try:
             (translation,rotation) = self.trans_listener.lookupTransform('/map', '/base_footprint', rospy.Time(0))
             self.x = translation[0]
@@ -195,6 +198,8 @@ class Supervisor:
         # logs the current mode
         if not(self.last_mode_printed == self.mode):
             rospy.loginfo("Current Mode: %s", self.mode)
+            #Publish the State of the Supervisor for the Demo   
+            self.sup_status_publisher.publish("Current Mode: "+ str(self.mode) )
             self.last_mode_printed = self.mode
 
         # checks wich mode it is in and acts accordingly

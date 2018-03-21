@@ -21,6 +21,7 @@ class Phase_Supervisor():
         rospy.init_node('Publish_Goals', anonymous=True)
         self.pub = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=10)
         self.ready_pub = rospy.Publisher('/ready_to_rescue', Bool, queue_size=10)
+        self.pub_status= rospy.Publisher('/Phase_Sup_Status', String, queue_size=10)  #A node to publish the status for the demo
         self.listener = tf.TransformListener()
         rospy.Subscriber('/animals', DetectedAnimal , self.Track_Animals_Callback) # INCOMPLETE
         rospy.Subscriber('/Return_Ready', Bool, self.Return_Ready_Callback)
@@ -43,6 +44,9 @@ class Phase_Supervisor():
         # pub = rospy.Publisher('Goals', PoseStamped, queue_size=10)
         rate = rospy.Rate(10) # 10hz
         pose_g_msg = PoseStamped()
+
+        #Publish Which Animal We are Trying to Rescue
+        self.pub_status.publish('Rescuing Animal '+goal_string)
 
         # while not rospy.is_shutdown():
 	    #I Added this to a working node
@@ -107,6 +111,7 @@ class Phase_Supervisor():
             self.ready_pub.publish(ready_msg)
 
         elif self.phase == Phase.RESCUE:
+            self.pub_status.publish('Rescuing Animals')
             self.Rescue() # get all animals
             self.Navigate() # Bring them home!
             self.phase = Phase.EXPLORE # give control back to us.
@@ -126,6 +131,8 @@ class Phase_Supervisor():
             else:
                 self.loop()
             print self.phase
+            self.pub_status.publish("Current Mode: "+ str(self.phase))
+            
             rate.sleep()
 
 if __name__ == '__main__':
